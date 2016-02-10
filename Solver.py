@@ -17,9 +17,40 @@ class Solver(object):
     #Sudoku is a Sudoku object. The starting state of the puzzle."""
     def solve(Sudoku, level, order_method):
         self.time = time.process_time()
-        is_solved = False
+        timelimit = self.time + 300
         self.num_backtracks = 0
 
-        # Do some things here
+        self.solution.push(copy(Sudoku))
 
-        return [is_solved, self.num_backtracks, time.process_time() - self.time]
+        is_solved = solve_recurse(level, order_method, timelimit)
+
+        return [is_solved, self.num_backtracks, time.process_time() - self.time, self.solution.front()]
+
+    def solve_recurse(level, order_method, timelimit):
+        Sudoku = copy(self.solution.front())
+        is_solved = Sudoku.is_solved() # Check if already solution
+
+        while(not is_solved and time.process_time() < timelimit):
+
+            spot = order_method(Sudoku) # choose which spot to assign
+
+            for possibility in spot.domain():
+                Sudoku.assign(spot, possibility)
+
+                if Sudoku.forward_prop(level, spot):
+                    # save a copy of puzzle each time assignment isn't illegal
+                    self.solution.push(copy(Sudoku))
+
+                    # move to the next assignment
+                    if solve_recurse(level, order_method, timelimit):
+                        # there's a solution below!
+                        return True
+                    else:
+                        # this assignment did not lead to a solution
+                        self.solution.pop()
+
+                # made to the end of this for loop; you are backtracking
+                self.num_backtracks += 1 # continue searching possibilities for valid propogations
+                Sudoku = copy(self.solution.front()) # reset the puzzle to last partial solution
+
+        return is_solved
